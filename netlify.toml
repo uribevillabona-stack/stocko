@@ -1,0 +1,10 @@
+# Netlify detecta Next.js y usa su adaptador oficial automáticamente.
+# Las migraciones NO se aplican en el build: ejecútalas antes de publicar
+# (ver README → Producción).
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "22"
+  NPM_FLAGS = "--include=dev"

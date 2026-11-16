@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: stocko-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: stocko
+      POSTGRES_PASSWORD: stocko
+      POSTGRES_DB: stocko
+    ports:
+      - "5432:5432"
+    volumes:
+      - stocko_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stocko -d stocko"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  stocko_pgdata:

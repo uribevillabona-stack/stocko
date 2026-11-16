@@ -1,0 +1,22 @@
+node_modules
+.next
+/out
+/build
+coverage
+.local
+.env
+.env.local
+.env.*.local
+*.log
+.DS_Store
+next-env.d.ts
+*.tsbuildinfo
+.next-desktop
+desktop/node_modules
+desktop/stage
+desktop/dist
+
+# Herramientas y notas locales (no son parte del proyecto)
+.claude/
+.omc/
+CERRAR-SESION.txt

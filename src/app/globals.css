@@ -1,0 +1,233 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Stocko · Calma
+ * Fondo cálido casi blanco, tarjetas blancas suaves y un solo acento
+ * verde azulado. El movimiento guía (entra, confirma, responde al toque);
+ * nunca decora, y se apaga con "reducir movimiento".
+ */
+@theme {
+  --color-ink: #1a1a18;
+  --color-brand: #0f766e;
+  --color-brand-strong: #115e59;
+  --color-brand-soft: #e3f1ef;
+  --color-accent: #0f766e;
+  --color-accent-strong: #115e59;
+  --color-surface: #f6f5f2;
+  --color-card: #ffffff;
+  --color-hover: #ecebe5;
+  --color-border: #e7e5df;
+  --color-muted: #6b6a65;
+  --color-warn: #92400e;
+  --color-warn-soft: #fef3c7;
+  --color-danger: #b42318;
+  --color-danger-soft: #fee4e2;
+  --color-success: #166534;
+  --color-success-soft: #e3f4e8;
+  --color-logo-top: #0f766e;
+  --color-logo-bottom: #1a1a18;
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --radius-lg: 12px;
+  --radius-xl: 14px;
+  --radius-2xl: 20px;
+
+  --shadow-soft: 0 1px 2px rgb(26 26 24 / 0.05), 0 4px 14px rgb(26 26 24 / 0.05);
+  --shadow-lift: 0 12px 32px rgb(26 26 24 / 0.08);
+  --shadow-brand: 0 8px 22px rgb(15 118 110 / 0.28);
+
+  --ease-out-soft: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-spring: cubic-bezier(0.3, 1.5, 0.5, 1);
+
+  /* "backwards": oculto durante el retraso de la cascada, pero al terminar ya no fija
+     transform/opacity (si no, anularía el :hover de las tarjetas). */
+  --animate-rise: rise 0.5s var(--ease-out-soft) backwards;
+  --animate-pop: pop 0.4s var(--ease-spring) backwards;
+  --animate-slide-in: slide-in 0.35s var(--ease-out-soft) backwards;
+  --animate-draw: draw 0.5s 0.15s ease-out both;
+  --animate-float: float 7s ease-in-out infinite;
+
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-8px);
+    }
+  }
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes pop {
+    from {
+      opacity: 0;
+      transform: translateY(6px) scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes slide-in {
+    from {
+      opacity: 0;
+      transform: translateX(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes draw {
+    from {
+      stroke-dashoffset: 24;
+    }
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+}
+
+.dark {
+  --color-ink: #edece8;
+  --color-surface: #121211;
+  --color-card: #1b1b19;
+  --color-hover: #242421;
+  --color-border: #2c2c29;
+  --color-muted: #a3a29c;
+  --color-brand: #5ec8b9;
+  --color-brand-strong: #8adbcf;
+  --color-brand-soft: #16302d;
+  --color-accent: #0f766e;
+  --color-accent-strong: #0d6b63;
+  --color-warn: #fbbf24;
+  --color-warn-soft: #33270b;
+  --color-danger: #f8877c;
+  --color-danger-soft: #3a1714;
+  --color-success: #6ee7a0;
+  --color-success-soft: #12291b;
+  --color-logo-top: #5ec8b9;
+  --color-logo-bottom: #edece8;
+  --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-lift: 0 12px 32px rgb(0 0 0 / 0.35);
+  --shadow-brand: 0 8px 22px rgb(15 118 110 / 0.35);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background-color: var(--color-surface);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.02em;
+  }
+
+  ::selection {
+    background-color: var(--color-brand-soft);
+    color: var(--color-ink);
+  }
+}
+
+@utility tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Cada pantalla entra en cascada: sus bloques suben uno tras otro. */
+@utility page-enter {
+  & > * {
+    animation: var(--animate-rise);
+  }
+  & > *:nth-child(2) {
+    animation-delay: 60ms;
+  }
+  & > *:nth-child(3) {
+    animation-delay: 120ms;
+  }
+  & > *:nth-child(4) {
+    animation-delay: 180ms;
+  }
+  & > *:nth-child(n + 5) {
+    animation-delay: 240ms;
+  }
+}
+
+/* Lo mismo para los hijos de una grilla o lista (tarjetas de resumen, etc.). */
+@utility stagger {
+  & > * {
+    animation: var(--animate-rise);
+  }
+  & > *:nth-child(2) {
+    animation-delay: 70ms;
+  }
+  & > *:nth-child(3) {
+    animation-delay: 140ms;
+  }
+  & > *:nth-child(4) {
+    animation-delay: 210ms;
+  }
+  & > *:nth-child(n + 5) {
+    animation-delay: 280ms;
+  }
+}
+
+/* Tarjeta que lleva a algún lado: se eleva al pasar el mouse. */
+@utility card-link {
+  transition:
+    transform 0.25s var(--ease-out-soft),
+    box-shadow 0.25s var(--ease-out-soft),
+    border-color 0.2s;
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lift);
+  }
+  &:active {
+    transform: scale(0.99);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    /* Sin esto, una animación infinita (la vista previa del login) temblaría. */
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media print {
+  * {
+    animation: none !important;
+  }
+}

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Stocko">
+  <rect width="512" height="512" rx="112" fill="#0f766e" />
+  <rect x="152" y="104" width="208" height="132" rx="46" fill="#ffffff" />
+  <rect x="96" y="268" width="320" height="148" rx="50" fill="#ffffff" fill-opacity="0.55" />
+</svg>
