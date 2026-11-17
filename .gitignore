@@ -12,6 +12,8 @@ coverage
 next-env.d.ts
 *.tsbuildinfo
 .next-desktop
+# Se genera al compilar (scripts/third-party-licenses.mjs)
+/public/legal
 desktop/node_modules
 desktop/stage
 desktop/dist

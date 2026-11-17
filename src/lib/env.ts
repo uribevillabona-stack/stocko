@@ -30,6 +30,9 @@ const envSchema = z.object({
   NEON_STORAGE_SECRET_ACCESS_KEY: z.string().optional(),
   // Fotos en una carpeta local en vez de S3 (desarrollo o servidor propio; no en Netlify).
   LOCAL_UPLOADS_DIR: z.string().optional(),
+  // Versión web: quién administra el sitio y cómo escribirle (se muestran en /legal/privacidad).
+  LEGAL_OPERATOR: z.string().optional(),
+  LEGAL_CONTACT: z.string().optional(),
 });
 
 const parsed = envSchema

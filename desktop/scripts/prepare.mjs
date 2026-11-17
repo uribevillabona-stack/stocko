@@ -16,6 +16,8 @@ const root = join(desktopDir, "..");
 const dist = join(root, ".next-desktop");
 
 console.log("1/4 Compilando Stocko para escritorio…");
+// Licencias de terceros y de Stocko: la app las sirve en /legal (también sin internet).
+execSync("node scripts/third-party-licenses.mjs", { cwd: root, stdio: "inherit" });
 // OneDrive puede tener abierto algún archivo del build anterior: se reintenta.
 rmSync(dist, { recursive: true, force: true, maxRetries: 20, retryDelay: 500 });
 execSync("npx next build", {
@@ -62,6 +64,9 @@ function prune(dir) {
 prune(join(serverOut, ".next-desktop"));
 for (const name of readdirSync(serverOut)) {
   if (name.startsWith(".env")) throw new Error(`No debe ir ${name} en el instalador`);
+}
+for (const required of ["public/legal/agpl-3.0.txt", "public/legal/licencias-de-terceros.txt"]) {
+  if (!existsSync(join(serverOut, required))) throw new Error(`Falta ${required} en el servidor de escritorio`);
 }
 
 console.log("3/4 Copiando Postgres…");

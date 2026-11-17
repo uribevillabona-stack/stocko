@@ -7,7 +7,12 @@ const { stageDir, distDir } = require("./paths.cjs");
 module.exports = {
   appId: "co.stocko.desktop",
   productName: "Stocko",
-  copyright: "Stocko",
+  copyright: "Copyright © 2026 uribevillabona-stack y quienes contribuyen a Stocko. Licencia AGPL-3.0.",
+  // Actualizaciones (lib/updates.cjs): el instalador las busca en las versiones publicadas
+  // en GitHub. Al compilar se generan resources/app-update.yml (va dentro del programa) y
+  // latest.yml (se sube con cada versión, junto al instalador y su .blockmap).
+  // Nunca se publica desde aquí: los scripts de compilación pasan publish: "never".
+  publish: [{ provider: "github", owner: "uribevillabona-stack", repo: "stocko" }],
   directories: { output: distDir, buildResources: "build" },
   files: ["main.cjs", "paths.cjs", "lib/**/*", "build/icon.png", "package.json"],
   // Servidor de Next, binarios de Postgres y migraciones: archivos reales en disco

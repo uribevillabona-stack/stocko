@@ -35,6 +35,7 @@ const identity = {
 build({
   projectDir: path.join(__dirname, ".."),
   targets: Platform.WINDOWS.createTarget("appx", Arch.x64),
+  publish: "never",
   config: {
     ...config,
     appx: {

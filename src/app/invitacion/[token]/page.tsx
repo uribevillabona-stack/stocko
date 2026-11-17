@@ -3,6 +3,7 @@ import Link from "next/link";
 import { logoutAction } from "@/actions/auth";
 import { InvitationForm } from "@/components/forms/invitation-form";
 import { AuthShell } from "@/components/layout/auth-shell";
+import { LegalConsent } from "@/components/legal/legal-consent";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button, ButtonLink } from "@/components/ui/button";
@@ -84,7 +85,10 @@ export default async function InvitationPage({
           </form>
         </div>
       ) : (
-        <InvitationForm token={token} mode={sameEmail ? "join" : "signup"} />
+        <>
+          <InvitationForm token={token} mode={sameEmail ? "join" : "signup"} />
+          {sameEmail ? null : <LegalConsent />}
+        </>
       )}
     </AuthShell>
   );

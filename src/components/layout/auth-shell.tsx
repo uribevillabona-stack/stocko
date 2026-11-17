@@ -1,5 +1,6 @@
 import { Check } from "lucide-react";
 import type { ReactNode } from "react";
+import { LegalLinks } from "@/components/legal/legal-links";
 import { Logo } from "@/components/layout/logo";
 
 const points = [
@@ -70,6 +71,7 @@ export function AuthShell({
           {description ? <p className="mt-2 text-[15px] leading-6 text-muted">{description}</p> : null}
           <div className="mt-8">{children}</div>
           {footer ? <div className="mt-6 text-sm text-muted">{footer}</div> : null}
+          <LegalLinks className="mt-10" />
         </div>
       </section>
     </main>

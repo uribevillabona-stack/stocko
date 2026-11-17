@@ -18,6 +18,7 @@ build({
   // La portable sirve donde Smart App Control bloquea el instalador sin firma.
   targets: Platform.WINDOWS.createTarget(["nsis", "zip"], Arch.x64),
   config,
+  publish: "never",
 })
   .then((files) => {
     for (const file of files) console.log(`Listo: ${file}`);

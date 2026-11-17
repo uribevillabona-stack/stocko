@@ -12,11 +12,21 @@ Los archivos todavía no tienen firma digital, así que Windows avisa la primera
 - **SmartScreen** ("Windows protegió su PC"): **Más información → Ejecutar de todas formas**.
 - Con **Smart App Control** activo, Windows puede bloquear el instalador sin dar la opción de ejecutarlo. En ese caso usa la versión **portable**.
 
+Las versiones siguientes llegan solas: Stocko avisa cuando hay una nueva y, con el instalador, la descarga y la instala cuando aceptas. La portable avisa y se actualiza reemplazando la carpeta.
+
 Todo queda en tu PC. Ver [Versión de escritorio](#versión-de-escritorio-windows-sin-internet) para los datos y las copias de seguridad.
 
-## Licencia
+## Licencia y avisos legales
 
-Código libre bajo la [GNU AGPL-3.0](LICENSE): puedes usarlo, estudiarlo, modificarlo y compartirlo. Si distribuyes una versión modificada, o la ofreces como servicio web, debes publicar su código con la misma licencia.
+Copyright © 2026 uribevillabona-stack y quienes contribuyen a Stocko.
+
+Código libre bajo la [GNU AGPL-3.0](LICENSE): puedes usarlo, estudiarlo, modificarlo y compartirlo. Si distribuyes una versión modificada, o la ofreces como servicio web, debes publicar su código con la misma licencia. Se entrega sin ninguna garantía.
+
+- [Política de privacidad](legal/privacidad.md): en Windows los datos no salen del PC; en la web responde quien administra el sitio.
+- [Términos de uso](legal/terminos.md): sin garantía, copias de seguridad, no es facturación electrónica, datos de clientes y cobros por WhatsApp.
+- Licencias de terceros: se generan al compilar (`npm run legal:licenses`) y la app las muestra en **Licencias**.
+
+Dentro de la app están en `/legal` (enlaces al pie de las pantallas de entrada y en **Mi cuenta**) y, en Windows, en el menú **Ayuda**.
 
 **Estado:** Fases 1 a 7 terminadas: base, inventario, ventas y fiado, reportes, WhatsApp y catálogo, fotos y PWA, y endurecimiento. Falta solo el despliegue en tu cuenta de Netlify + Neon (ver [Producción](#producción-netlify-free--neon-free)).
 
@@ -95,6 +105,7 @@ El seed crea el negocio «Tienda La Esquina», 4 productos (uno por kilo y uno c
 | `npm run db:studio` | Abre Drizzle Studio. |
 | `npx tsx scripts/generate-icons.ts` | Regenera los íconos PNG de la PWA. |
 | `npm run desktop:dist` | Genera el instalador de Windows (ver "Versión de escritorio"). |
+| `npm run legal:licenses` | Genera `public/legal` (licencia de Stocko y licencias de terceros). Corre solo antes de `dev` y `build`. |
 
 ## Qué hace la aplicación
 
@@ -125,6 +136,7 @@ src/
     api/fotos/[...key]/     fotos de producto
     api/health/             salud de la base de datos
     offline/                respaldo de la PWA
+    legal/                  privacidad, términos y licencias (públicas)
   actions/                  server actions (validan con Zod y sacan el negocio de la sesión)
   components/               UI, formularios, reportes, catálogo y PWA
   lib/                      env, DB, auth, dinero, cantidades, fechas, almacenamiento,
@@ -133,6 +145,7 @@ src/
     auth/context.ts         sesión, negocio y guardas de rol
     services/               inventario, ventas, clientes, reportes, WhatsApp, catálogo
 drizzle/                    migraciones SQL versionadas (0000–0007)
+legal/                      política de privacidad y términos (la app los muestra tal cual)
 tests/                      Vitest
 scripts/                    PostgreSQL embebido e íconos
 ```
@@ -195,7 +208,7 @@ scripts/                    PostgreSQL embebido e íconos
 
 `npm test` usa `DATABASE_URL_TEST`, migra el esquema solo y vacía las tablas antes de cada prueba de integración. **No apuntes esa variable a la base de datos de desarrollo.** Con el PostgreSQL embebido ya existe `stocko_test`.
 
-88 pruebas en 14 archivos. Cubren:
+93 pruebas en 15 archivos. Cubren:
 
 - Dinero, cantidades, teléfonos, cifrado, fechas por zona horaria (incluido el cambio de horario) y validaciones.
 - Inventario: movimientos, sobreventa, salidas simultáneas sin stock negativo, reservas (entregar, liberar, vencer), alertas y aislamiento.
@@ -204,6 +217,7 @@ scripts/                    PostgreSQL embebido e íconos
 - WhatsApp: firma del webhook, verificación, reintentos sin duplicar, ventana de 24 h, tope mensual, fallos de la API y aislamiento.
 - Concurrencia: ventas, anulaciones, entradas, cambios de precio y vencimientos al mismo tiempo, sin interbloqueos y con el libro de movimientos cuadrado.
 - Catálogo, fotos, límite de intentos y auditoría.
+- Documentos legales: que la app sepa mostrar todo lo que usan.
 
 ## Versión de escritorio (Windows, sin internet)
 
@@ -241,6 +255,17 @@ La primera vez se crea la cuenta en "Crea una". No trae datos demo. Para que un 
 - La copia necesita `config.json`, porque guarda la contraseña de la base y la clave que cifra los secretos de WhatsApp. No copies solo `pgdata`.
 - Desinstalar el programa **no** borra los datos.
 
+**Actualizaciones.**
+- Con el instalador: Stocko busca una versión nueva en GitHub un rato después de abrir y luego una vez al día. Si la hay, pregunta antes de descargarla; al terminar ofrece **Actualizar ahora** o instalarla **la próxima vez que abra Stocko**.
+- La instalación siempre es visible (la ventana del instalador, con su avance) y con la persona presente. Nunca corre en silencio al cerrar: el instalador empieza quitando los archivos del programa y, si alguien apagara el PC enseguida, Stocko no volvería a abrir.
+- **Actualizar ahora** espera a que Stocko cierre bien (base detenida y copia del día hecha) antes de abrir el instalador. Al abrir la versión nueva se guarda además `antes-de-actualizar-…`.
+- La descarga se comprueba con la huella (SHA-512) publicada junto a la versión.
+- La búsqueda no envía datos del negocio ni un identificador de la instalación.
+- Portable: solo avisa y abre la página de descargas.
+- Microsoft Store: no hace nada de esto; la Store actualiza sola.
+- Si Windows bloquea el instalador descargado (Smart App Control), Stocko lo dice y ofrece la descarga manual en vez de reintentar.
+- **Ayuda → Buscar actualizaciones…** busca en el momento. **Ayuda → Buscar actualizaciones al abrir** apaga la búsqueda automática: es la única conexión a internet que Stocko para Windows hace por su cuenta.
+
 **Qué no funciona sin internet.**
 - Envío por WhatsApp: el botón abre WhatsApp con el mensaje listo, pero necesita conexión en ese momento. La Cloud API solo está en la versión web.
 - Catálogo público para clientes.
@@ -257,9 +282,20 @@ npm run desktop:test             # pruebas de copias y restauración
 - En `%LOCALAPPDATA%\StockoBuild\dist` quedan dos archivos:
   - `Stocko-Instalador-x.y.z.exe`: el instalador, con accesos directos, desinstalación y actualizaciones.
   - `Stocko-x.y.z-portable.zip`: la versión portable. Se descomprime en cualquier carpeta y se abre `Stocko.exe`. El acceso directo se crea desde el menú Archivo → **Crear acceso directo en el Escritorio**. Para actualizar, se reemplaza la carpeta. Los datos son los mismos que con el instalador (`%LOCALAPPDATA%\Stocko`).
+- También quedan `latest.yml` y `Stocko-Instalador-x.y.z.exe.blockmap`: los usa la actualización automática.
 - La compilación y el empaquetado se hacen fuera de OneDrive para no sincronizar cientos de MB. `STOCKO_DESKTOP_BUILD_DIR` cambia esa carpeta.
 - Para probar sin instalar: `npm run desktop:prepare` y luego `npm run desktop:dev`.
 - `STOCKO_DATA_DIR` usa otra carpeta de datos, útil para pruebas.
+- `STOCKO_UPDATE_URL` busca las actualizaciones en un servidor de este mismo PC (`http://127.0.0.1:puerto`, una carpeta con `latest.yml` y el instalador), útil para pruebas. Cualquier otra dirección se ignora.
+
+**Publicar una versión** (para que la reciban quienes ya tienen Stocko):
+1. Sube el número de versión en `package.json` y `desktop/package.json`.
+2. `npm run desktop:dist`.
+3. Crea la versión en GitHub con la etiqueta `vX.Y.Z` y sube **los cuatro archivos** de `%LOCALAPPDATA%\StockoBuild\dist`: el instalador, su `.blockmap`, `latest.yml` y el ZIP portable.
+   ```powershell
+   gh release create vX.Y.Z Stocko-Instalador-X.Y.Z.exe Stocko-Instalador-X.Y.Z.exe.blockmap latest.yml Stocko-X.Y.Z-portable.zip
+   ```
+4. Sin `latest.yml` nadie recibe la actualización. No cambies el nombre de los archivos: `latest.yml` apunta al instalador por su nombre. Los borradores y las versiones previas (pre-release) no se ofrecen.
 
 **Firma digital y Smart App Control.** El instalador no está firmado, y eso tiene consecuencias:
 - SmartScreen muestra "Windows protegió su PC" → **Más información → Ejecutar de todas formas**.
@@ -292,6 +328,7 @@ npm run desktop:test             # pruebas de copias y restauración
    - `BETTER_AUTH_SECRET` (aleatorio; la app no arranca en producción con el de ejemplo)
    - `BETTER_AUTH_URL` y `NEXT_PUBLIC_APP_URL`: el mismo dominio final con `https://`
    - `ENCRYPTION_KEY`
+   - `LEGAL_OPERATOR` y `LEGAL_CONTACT`: quién administra el sitio y cómo escribirle por temas de datos personales. Se muestran en `/legal/privacidad`; complétalas antes de abrir el sitio a otras personas. Se leen al compilar: después de cambiarlas hay que volver a publicar.
    - Opcionales: `NEON_STORAGE_*` para fotos, `WHATSAPP_GRAPH_VERSION` y `TRUSTED_IP_HEADER` (solo fuera de Netlify).
 4. Aplica las migraciones contra Neon desde tu máquina **antes** de publicar:
    ```powershell

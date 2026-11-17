@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PasswordForm, ProfileForm } from "@/components/forms/account-forms";
+import { LegalLinks } from "@/components/legal/legal-links";
 import { PageHeader } from "@/components/layout/page-header";
 import { InstallButton } from "@/components/pwa/install-button";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +39,15 @@ export default async function AccountPage() {
           />
           <CardBody>
             <InstallButton />
+          </CardBody>
+        </Card>
+        <Card>
+          <CardHeader
+            title="Legal"
+            description="Stocko es software libre (licencia AGPL-3.0) y se entrega sin garantía. Aquí están las condiciones y el código."
+          />
+          <CardBody>
+            <LegalLinks className="text-sm" />
           </CardBody>
         </Card>
       </div>

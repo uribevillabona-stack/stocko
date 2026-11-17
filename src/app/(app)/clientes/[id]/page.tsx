@@ -90,6 +90,12 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
             {cloud.available ? (
               <CloudSendButton kind="reminder" id={customer.id} windowOpen={cloud.windowOpen} />
             ) : null}
+            {business.timezone === "America/Bogota" ? (
+              <p className="w-full text-xs leading-5 text-muted">
+                En Colombia los cobros solo se pueden enviar de lunes a viernes de 7 a. m. a 7 p. m. y los
+                sábados de 8 a. m. a 3 p. m. (nunca domingos ni festivos), y máximo una vez al día.
+              </p>
+            ) : null}
           </div>
         ) : null}
 

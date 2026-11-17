@@ -4,6 +4,7 @@
 //   2. Migraciones de la base al abrir (también al actualizar Stocko).
 //   3. El servidor de Next (versión standalone) en 127.0.0.1.
 //   4. Una ventana que lo muestra.
+// Lo único que pide por internet por su cuenta es buscar actualizaciones (lib/updates.cjs).
 // Arrancar, copiar, restaurar, reiniciar y cerrar van de a uno (`serial`), y
 // los datos nunca se tocan con Postgres corriendo.
 const { app, BrowserWindow, Menu, dialog, session, shell } = require("electron");
@@ -14,6 +15,7 @@ const os = require("node:os");
 const path = require("node:path");
 const pgctl = require("./lib/postgres.cjs");
 const backup = require("./lib/backup.cjs");
+const updates = require("./lib/updates.cjs");
 
 const PREFERRED_APP_PORT = 47821;
 const DB_NAME = "stocko";
@@ -139,6 +141,8 @@ let server = null;
 let appUrl = null;
 let quitting = false;
 let shutdownDone = false;
+/** Actualizaciones (instalador y portable; en la Store y en desarrollo queda inactivo). */
+let updater = null;
 
 app.commandLine.appendSwitch("lang", "es");
 // Mismo ID que los accesos directos (appId): la barra de tareas agrupa la ventana
@@ -832,6 +836,87 @@ function createDesktopShortcut() {
   });
 }
 
+/**
+ * Privacidad, términos y licencias. Con Stocko abierto se muestran en una ventana
+ * aparte (sin internet y sin sacar a la persona de lo que está haciendo); si Stocko
+ * no pudo abrir, se abre la copia publicada junto al código.
+ */
+const LEGAL_ONLINE = {
+  privacidad: `${updates.REPO_URL}/blob/main/legal/privacidad.md`,
+  terminos: `${updates.REPO_URL}/blob/main/legal/terminos.md`,
+  licencias: `${updates.REPO_URL}/blob/main/LICENSE`,
+};
+let legalWindow = null;
+function openLegal(page) {
+  if (state !== "ready" || !appUrl || !mainWindow || mainWindow.isDestroyed()) {
+    openOutside(LEGAL_ONLINE[page]);
+    return;
+  }
+  const url = `${appUrl}/legal/${page}`;
+  if (legalWindow && !legalWindow.isDestroyed()) {
+    void legalWindow.loadURL(url);
+    legalWindow.focus();
+    return;
+  }
+  const child = new BrowserWindow({
+    parent: mainWindow,
+    width: 860,
+    height: 760,
+    minWidth: 360,
+    minHeight: 480,
+    title: "Stocko",
+    autoHideMenuBar: true,
+    backgroundColor: "#f7f7f5",
+    webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },
+  });
+  legalWindow = child;
+  child.on("closed", () => {
+    if (legalWindow === child) legalWindow = null;
+  });
+  // "Volver a Stocko" (o el logo) en esta ventana: se cierra y queda la ventana principal.
+  const leaveLegal = (_event, target) => {
+    if (child.isDestroyed() || target.startsWith(`${appUrl}/legal`)) return;
+    child.close();
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.focus();
+  };
+  child.webContents.on("did-navigate", leaveLegal);
+  child.webContents.on("did-navigate-in-page", leaveLegal);
+  void child.loadURL(url);
+}
+
+/** Avisos legales que la licencia pide mostrar: autoría, sin garantía y dónde está la licencia. */
+function showAbout() {
+  const updatesLine = IS_STORE
+    ? "Las actualizaciones llegan por la Microsoft Store."
+    : updater?.active
+      ? `Actualizaciones: Stocko ${updater.autoEnabled() ? "revisa" : "no revisa"} al abrir si hay una versión nueva (se cambia en este menú).`
+      : null;
+  void dialog
+    .showMessageBox(mainWindow, {
+      type: "info",
+      title: "Acerca de Stocko",
+      message: `Stocko ${app.getVersion()}`,
+      detail: [
+        "Copyright © 2026 uribevillabona-stack y quienes contribuyen a Stocko.",
+        "Stocko es software libre: puedes usarlo, estudiarlo, compartirlo y modificarlo bajo la licencia GNU AGPL versión 3. " +
+          "Se entrega SIN NINGUNA GARANTÍA, en la medida en que la ley lo permita.",
+        `Funciona sin internet: todo se guarda en este PC.\nDatos: ${dataRoot}\n` +
+          `Copias automáticas (al abrir y al cerrar; 7 diarias y 4 semanales): ${paths.backups}`,
+        updatesLine,
+      ]
+        .filter(Boolean)
+        .join("\n\n"),
+      buttons: ["Cerrar", "Ver la licencia", "Código fuente"],
+      defaultId: 0,
+      cancelId: 0,
+      noLink: true,
+    })
+    .then((answer) => {
+      if (answer.response === 1) openLegal("licencias");
+      else if (answer.response === 2) openOutside(updates.REPO_URL);
+    });
+}
+
 function buildMenu() {
   const template = [
     {
@@ -881,18 +966,24 @@ function buildMenu() {
     {
       label: "Ayuda",
       submenu: [
-        {
-          label: "Acerca de Stocko",
-          click: () =>
-            void dialog.showMessageBox(mainWindow, {
-              type: "info",
-              title: "Acerca de Stocko",
-              message: `Stocko ${app.getVersion()}`,
-              detail:
-                `Funciona sin internet: todo se guarda en este PC.\n\nDatos: ${dataRoot}\n` +
-                `Copias automáticas (al abrir y al cerrar; 7 diarias y 4 semanales): ${paths.backups}`,
-            }),
-        },
+        ...(updater?.active
+          ? [
+              { label: "Buscar actualizaciones…", click: () => void updater.checkNow() },
+              {
+                label: "Buscar actualizaciones al abrir",
+                type: "checkbox",
+                checked: updater.autoEnabled(),
+                click: (item) => updater.setAuto(item.checked),
+              },
+              { type: "separator" },
+            ]
+          : []),
+        { label: "Política de privacidad", click: () => openLegal("privacidad") },
+        { label: "Términos de uso", click: () => openLegal("terminos") },
+        { label: "Licencias", click: () => openLegal("licencias") },
+        { label: "Código fuente", click: () => openOutside(updates.REPO_URL) },
+        { type: "separator" },
+        { label: "Acerca de Stocko", click: showAbout },
       ],
     },
   ];
@@ -954,6 +1045,13 @@ async function bootstrap() {
     // Una base que quedó abierta de una sesión que se cerró mal.
     if (pgctl.isInitialised(paths.pgData) && !(await pgStopped())) await pgctl.stop({ pgDir, dataDir: paths.pgData, log });
     backup.recoverPendingRestore(dataRoot, log);
+    // Actualización descargada que quedó para "la próxima vez que abra Stocko": se instala
+    // ahora, con la base todavía cerrada. La versión nueva guarda su copia al abrir.
+    if (await updater.installAtStartup(showStatus)) {
+      app.quit();
+      return;
+    }
+    checkpoint();
     const previous = readState();
     updateState({ healthyAt: null, startedAt: new Date().toISOString() });
     checkpoint();
@@ -1006,7 +1104,16 @@ if (!app.requestSingleInstanceLock()) {
     setState(state);
     // Espera a que termine lo que esté en curso (arranque, copia…) y luego cierra.
     serial(shutdown)
-      .catch((error) => log(`al cerrar: ${error.stack || error}`))
+      .then(
+        () => true,
+        (error) => {
+          log(`al cerrar: ${error.stack || error}`);
+          return false;
+        },
+      )
+      // «Actualizar ahora»: el instalador solo arranca si Stocko cerró bien y la base quedó detenida.
+      .then((closed) => updater?.installOnQuit({ clean: async () => closed && (await pgStopped()) }))
+      .catch((error) => log(`al instalar la actualización: ${error.stack || error}`))
       .finally(() => {
         shutdownDone = true;
         app.quit();
@@ -1014,6 +1121,18 @@ if (!app.requestSingleInstanceLock()) {
   });
 
   app.whenReady().then(() => {
+    updater = updates.create({
+      app,
+      dialog,
+      shell,
+      kind: updates.installKind({ isStore: IS_STORE, isPackaged: app.isPackaged, exePath: process.execPath }),
+      log,
+      readState,
+      updateState,
+      getWindow: () => mainWindow,
+      canPrompt: () => state === "ready" && !quitting && Boolean(mainWindow) && !mainWindow.isDestroyed(),
+      quit: () => app.quit(),
+    });
     Menu.setApplicationMenu(buildMenu());
     // Solo se permite copiar al portapapeles (botones "Copiar"). Nada de cámara, ubicación, etc.
     session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) =>
@@ -1022,5 +1141,6 @@ if (!app.requestSingleInstanceLock()) {
     createWindow();
     showStatus("Abriendo Stocko…");
     void serial(bootstrap);
+    updater.start();
   });
 }

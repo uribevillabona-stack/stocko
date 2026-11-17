@@ -158,6 +158,10 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
           </CardBody>
         </Card>
 
+        <p className="hidden text-center text-xs text-muted print:block">
+          Comprobante de venta de {business.name}. No es factura electrónica de venta ni documento equivalente.
+        </p>
+
         <div className="flex flex-wrap items-start gap-2 print:hidden">
           <a
             href={waLink(detail.customerPhone, receipt)}

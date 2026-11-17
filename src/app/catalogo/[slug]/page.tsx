@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { CatalogView } from "@/components/catalog/catalog-view";
+import { LegalLinks } from "@/components/legal/legal-links";
 import { Logo } from "@/components/layout/logo";
 import { formatPhone } from "@/lib/phone";
 import { getPublicCatalog } from "@/server/services/catalog";
@@ -48,8 +49,11 @@ export default async function PublicCatalogPage({ params }: { params: Promise<{ 
         />
       )}
 
-      <footer className="mt-10 flex items-center justify-center gap-2 text-xs text-muted">
-        Hecho con <Logo markClassName="size-4" />
+      <footer className="mt-10 flex flex-col items-center gap-3 text-xs text-muted">
+        <span className="flex items-center gap-2">
+          Hecho con <Logo markClassName="size-4" />
+        </span>
+        <LegalLinks className="justify-center" />
       </footer>
     </main>
   );

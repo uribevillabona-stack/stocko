@@ -99,6 +99,12 @@ export function CustomerForm({
         </label>
       ) : null}
 
+      {customer ? null : (
+        <p className="text-xs leading-5 text-muted">
+          Antes de guardarlo, pídele permiso a tu cliente para tener sus datos y para escribirle.
+        </p>
+      )}
+
       <div className="flex justify-end">
         <SubmitButton pendingLabel="Guardando…">
           {customer ? "Guardar cliente" : "Crear cliente"}

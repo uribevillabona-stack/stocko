@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { RegisterForm } from "@/components/forms/register-form";
 import { AuthShell } from "@/components/layout/auth-shell";
+import { LegalConsent } from "@/components/legal/legal-consent";
 import { getAuthContext } from "@/server/auth/context";
 
 export const metadata: Metadata = { title: "Crear cuenta" };
@@ -26,6 +27,7 @@ export default async function RegisterPage() {
       }
     >
       <RegisterForm />
+      <LegalConsent />
     </AuthShell>
   );
 }
