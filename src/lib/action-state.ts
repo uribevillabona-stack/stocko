@@ -21,10 +21,11 @@ export function fieldValue(state: ActionState, field: string, fallback = ""): st
   return state.values?.[field] ?? fallback;
 }
 
+/** Lo enviado, para volver a mostrarlo. Nunca incluye contraseñas (viajan de vuelta a la página). */
 export function formValues(formData: FormData): Record<string, string> {
   const values: Record<string, string> = {};
   for (const [key, value] of formData.entries()) {
-    if (typeof value === "string" && !key.startsWith("$ACTION")) values[key] = value;
+    if (typeof value === "string" && !key.startsWith("$ACTION") && !/password/i.test(key)) values[key] = value;
   }
   return values;
 }

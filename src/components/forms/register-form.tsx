@@ -5,7 +5,8 @@ import { registerAction } from "@/actions/auth";
 import { SubmitButton } from "@/components/forms/submit-button";
 import { Alert } from "@/components/ui/alert";
 import { Field, inputStyles } from "@/components/ui/field";
-import { firstFieldError, initialActionState } from "@/lib/action-state";
+import { PasswordInput } from "@/components/ui/password-input";
+import { fieldValue, firstFieldError, initialActionState } from "@/lib/action-state";
 
 export function RegisterForm() {
   const [state, formAction] = useActionState(registerAction, initialActionState);
@@ -22,6 +23,7 @@ export function RegisterForm() {
           autoComplete="name"
           autoFocus
           placeholder="Ana Pérez"
+          defaultValue={fieldValue(state, "name")}
           className={inputStyles}
         />
       </Field>
@@ -37,6 +39,7 @@ export function RegisterForm() {
           type="text"
           autoComplete="organization"
           placeholder="Tienda La Esquina"
+          defaultValue={fieldValue(state, "businessName")}
           className={inputStyles}
         />
       </Field>
@@ -48,6 +51,7 @@ export function RegisterForm() {
           type="email"
           autoComplete="email"
           placeholder="tu@correo.com"
+          defaultValue={fieldValue(state, "email")}
           className={inputStyles}
         />
       </Field>
@@ -58,14 +62,15 @@ export function RegisterForm() {
         hint="Mínimo 8 caracteres."
         error={firstFieldError(state, "password")}
       >
-        <input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="new-password"
-          placeholder="••••••••"
-          className={inputStyles}
-        />
+        <PasswordInput id="password" name="password" autoComplete="new-password" placeholder="••••••••" />
+      </Field>
+
+      <Field
+        label="Repite la contraseña"
+        htmlFor="confirmPassword"
+        error={firstFieldError(state, "confirmPassword")}
+      >
+        <PasswordInput id="confirmPassword" name="confirmPassword" autoComplete="new-password" placeholder="••••••••" />
       </Field>
 
       <SubmitButton className="w-full" pendingLabel="Creando cuenta…">

@@ -21,6 +21,9 @@ const envSchema = z.object({
   ),
   // "1" cuando corre dentro de Stocko para Windows (sin internet, un solo PC).
   STOCKO_DESKTOP: z.preprocess((value) => (value === "" ? undefined : value), z.literal("1").optional()),
+  // Solo en Windows: clave de este arranque para los enlaces de "Olvidé mi contraseña"
+  // (la crea desktop/main.cjs; ver src/lib/desktop-recovery.ts).
+  STOCKO_RECOVERY_KEY: z.preprocess((value) => (value === "" ? undefined : value), z.string().min(32).optional()),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   // Fotos de producto (opcional). Neon Object Storage es compatible con S3.
   NEON_STORAGE_ENDPOINT: z.string().optional(),

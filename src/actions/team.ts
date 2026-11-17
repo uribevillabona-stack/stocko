@@ -6,7 +6,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import type { ActionState } from "@/lib/action-state";
+import { formValues, type ActionState } from "@/lib/action-state";
 import { recordAudit } from "@/lib/audit";
 import { auth } from "@/lib/auth";
 import { RATE_LIMIT_MESSAGE, RATE_LIMITS, hitRateLimit } from "@/lib/rate-limit";
@@ -30,20 +30,31 @@ const inviteSchema = z.object({
   role: z.enum(["owner", "employee"]),
 });
 
-const acceptSchema = z.object({
-  token: z.string().min(1),
-  name: z.string().trim().min(2, "Escribe tu nombre").max(80),
-  password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres").max(128),
-});
+const samePassword = {
+  path: ["confirmPassword"],
+  message: "Las contraseñas no coinciden",
+};
 
-const employeeSchema = z.object({
-  name: z.string().trim().min(2, "Escribe el nombre").max(80, "Máximo 80 caracteres"),
-  email: emailField,
-  password: z
-    .string()
-    .min(8, "La contraseña debe tener al menos 8 caracteres")
-    .max(128, "Máximo 128 caracteres"),
-});
+const acceptSchema = z
+  .object({
+    token: z.string().min(1),
+    name: z.string().trim().min(2, "Escribe tu nombre").max(80),
+    password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres").max(128),
+    confirmPassword: z.string(),
+  })
+  .refine((value) => value.password === value.confirmPassword, samePassword);
+
+const employeeSchema = z
+  .object({
+    name: z.string().trim().min(2, "Escribe el nombre").max(80, "Máximo 80 caracteres"),
+    email: emailField,
+    password: z
+      .string()
+      .min(8, "La contraseña debe tener al menos 8 caracteres")
+      .max(128, "Máximo 128 caracteres"),
+    confirmPassword: z.string(),
+  })
+  .refine((value) => value.password === value.confirmPassword, samePassword);
 
 const idSchema = z.uuid("Identificador inválido");
 
@@ -158,14 +169,17 @@ export async function createEmployeeAction(
     name: text(formData, "name"),
     email: text(formData, "email"),
     password: text(formData, "password"),
+    confirmPassword: text(formData, "confirmPassword"),
   });
+  const values = formValues(formData);
 
   if (!parsed.success) {
-    return { fieldErrors: z.flattenError(parsed.error).fieldErrors };
+    return { fieldErrors: z.flattenError(parsed.error).fieldErrors, values };
   }
 
   const duplicate = {
     fieldErrors: { email: ["Ese correo ya tiene una cuenta en Stocko. Usa otro o envíale una invitación."] },
+    values,
   };
 
   const [existingUser] = await db
@@ -212,7 +226,7 @@ export async function createEmployeeAction(
     });
   } catch (error) {
     if (isUniqueViolation(error)) return duplicate;
-    return { error: "No pudimos crear la cuenta. Inténtalo de nuevo." };
+    return { error: "No pudimos crear la cuenta. Inténtalo de nuevo.", values };
   }
 
   await recordAudit({
@@ -264,10 +278,11 @@ export async function acceptInvitationAction(
       token,
       name: text(formData, "name"),
       password: text(formData, "password"),
+      confirmPassword: text(formData, "confirmPassword"),
     });
 
     if (!parsed.success) {
-      return { fieldErrors: z.flattenError(parsed.error).fieldErrors };
+      return { fieldErrors: z.flattenError(parsed.error).fieldErrors, values: formValues(formData) };
     }
 
     const [existingUser] = await db

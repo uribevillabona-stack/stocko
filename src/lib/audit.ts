@@ -21,7 +21,8 @@ export type AuditAction =
   | "payment.added"
   | "whatsapp.settings_updated"
   | "catalog.updated"
-  | "account.password_changed";
+  | "account.password_changed"
+  | "account.password_recovered";
 
 /**
  * Registra una acción sensible. Nunca debe romper la acción principal: si
@@ -95,4 +96,5 @@ export const AUDIT_LABELS: Record<AuditAction, string> = {
   "whatsapp.settings_updated": "Cambió la configuración de WhatsApp",
   "catalog.updated": "Cambió el catálogo en línea",
   "account.password_changed": "Cambió su contraseña",
+  "account.password_recovered": "Recuperó la contraseña desde este PC",
 };

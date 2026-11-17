@@ -175,7 +175,8 @@ scripts/                    PostgreSQL embebido e íconos
 - `requireMember()` exige sesión y negocio. `requireOwner()` además exige el rol dueño (reportes, ajustes, actividad, anular ventas, activar o desactivar productos y variantes).
 - El empleado nunca recibe costos ni márgenes: el servidor no los envía, no solo no los muestra.
 - El catálogo público expone solo nombre, descripción, foto, precio y si hay disponible.
-- Contraseñas con scrypt (Better Auth). Cambiar la contraseña cierra las otras sesiones. Quitar a un empleado cierra sus sesiones.
+- Contraseñas con scrypt (Better Auth). Crear una cuenta, un trabajador o una contraseña nueva pide escribirla dos veces. Cambiar la contraseña cierra las otras sesiones. Quitar a un empleado cierra sus sesiones.
+- Al fallar un formulario vuelve lo escrito, nunca las contraseñas (`formValues` las descarta).
 - Límite de intentos en Postgres (sirve con varias instancias), con ventana fija:
   - Login: 8 fallos por correo e IP cada 15 min, 50 fallos por correo cada hora y 30 intentos por IP cada 15 min. Entrar bien limpia el contador.
   - Registro, aceptar invitación y cambio de contraseña.
@@ -208,7 +209,7 @@ scripts/                    PostgreSQL embebido e íconos
 
 `npm test` usa `DATABASE_URL_TEST`, migra el esquema solo y vacía las tablas antes de cada prueba de integración. **No apuntes esa variable a la base de datos de desarrollo.** Con el PostgreSQL embebido ya existe `stocko_test`.
 
-93 pruebas en 15 archivos. Cubren:
+105 pruebas en 16 archivos. Cubren:
 
 - Dinero, cantidades, teléfonos, cifrado, fechas por zona horaria (incluido el cambio de horario) y validaciones.
 - Inventario: movimientos, sobreventa, salidas simultáneas sin stock negativo, reservas (entregar, liberar, vencer), alertas y aislamiento.
@@ -216,6 +217,7 @@ scripts/                    PostgreSQL embebido e íconos
 - Reportes: ventas, costo, margen, cobertura de costo, medios de pago, cartera e inventario valorizado.
 - WhatsApp: firma del webhook, verificación, reintentos sin duplicar, ventana de 24 h, tope mensual, fallos de la API y aislamiento.
 - Concurrencia: ventas, anulaciones, entradas, cambios de precio y vencimientos al mismo tiempo, sin interbloqueos y con el libro de movimientos cuadrado.
+- Cuentas: crear y volver a entrar, confirmar la contraseña y recuperarla en Windows (enlace firmado, de un solo uso, con vencimiento).
 - Catálogo, fotos, límite de intentos y auditoría.
 - Documentos legales: que la app sepa mostrar todo lo que usan.
 
@@ -229,6 +231,10 @@ Stocko también se instala como un programa de Windows que funciona **sin intern
 3. Arranca el servidor en `http://127.0.0.1:47821`, o en otro puerto libre, y lo muestra en una ventana.
 
 La primera vez se crea la cuenta en "Crea una". No trae datos demo. Para que un empleado use el mismo PC: Ajustes → Equipo → **Crear un trabajador** (nombre, correo y contraseña inicial; el dueño sigue en su sesión y el trabajador entra con esos datos). También sirve la invitación: **Abrir la invitación** → "Cerrar sesión y continuar", y esa persona crea su contraseña.
+
+**Olvidé mi contraseña.** En Windows no hay correo para enviar un enlace. En la pantalla de entrar, **¿Olvidaste tu contraseña?** (o Ayuda → **Olvidé mi contraseña…**) abre `/recuperar`: se elige la cuenta de este PC y se pone una contraseña nueva. Se cierran las sesiones abiertas de esa cuenta, se desbloquean los intentos fallidos y queda anotado en Ajustes → Actividad.
+- Stocko abre esa página con un enlace firmado de un solo uso que vence a los 15 minutos (`desktop/lib/recovery.cjs` lo firma, `src/lib/desktop-recovery.ts` lo verifica). La clave (`STOCKO_RECOVERY_KEY`) se crea en cada arranque y solo la conocen Stocko y su servidor: nadie más en la red ni en el PC puede crear un enlace, y en la versión web la página no existe.
+- Quien usa este PC con esta cuenta de Windows ya puede abrir la base de datos, así que esto no abre una puerta nueva. Si los trabajadores usan el mismo PC, conviene darles su propia cuenta de Windows.
 
 **Datos y copias de seguridad.**
 - `%LOCALAPPDATA%\Stocko` guarda:

@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import type { ActionState } from "@/lib/action-state";
+import { formValues, type ActionState } from "@/lib/action-state";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db/client";
 import { memberships } from "@/lib/db/schema";
@@ -26,19 +26,26 @@ const emailField = z
   .refine((value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value), "Escribe un correo válido")
   .transform((value) => value.toLowerCase());
 
-const registerSchema = z.object({
-  name: z.string().trim().min(2, "Escribe tu nombre").max(80, "El nombre es demasiado largo"),
-  email: emailField,
-  password: z
-    .string()
-    .min(8, "La contraseña debe tener al menos 8 caracteres")
-    .max(128, "La contraseña es demasiado larga"),
-  businessName: z
-    .string()
-    .trim()
-    .min(2, "Escribe el nombre de tu negocio")
-    .max(80, "El nombre del negocio es demasiado largo"),
-});
+const registerSchema = z
+  .object({
+    name: z.string().trim().min(2, "Escribe tu nombre").max(80, "El nombre es demasiado largo"),
+    email: emailField,
+    password: z
+      .string()
+      .min(8, "La contraseña debe tener al menos 8 caracteres")
+      .max(128, "La contraseña es demasiado larga"),
+    confirmPassword: z.string(),
+    businessName: z
+      .string()
+      .trim()
+      .min(2, "Escribe el nombre de tu negocio")
+      .max(80, "El nombre del negocio es demasiado largo"),
+  })
+  // Una contraseña mal escrita al crear la cuenta deja a la persona por fuera.
+  .refine((value) => value.password === value.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "Las contraseñas no coinciden",
+  });
 
 const loginSchema = z.object({
   email: emailField,
@@ -81,16 +88,19 @@ export async function registerAction(
     name: text(formData, "name"),
     email: text(formData, "email"),
     password: text(formData, "password"),
+    confirmPassword: text(formData, "confirmPassword"),
     businessName: text(formData, "businessName"),
   });
+  // Lo escrito vuelve al formulario si algo falla (sin las contraseñas).
+  const values = formValues(formData);
 
   if (!parsed.success) {
-    return { fieldErrors: z.flattenError(parsed.error).fieldErrors };
+    return { fieldErrors: z.flattenError(parsed.error).fieldErrors, values };
   }
 
   const ip = await clientIp();
   if (!(await hitRateLimit(`action:register:ip:${ip}`, RATE_LIMITS.registerPerIp)).allowed) {
-    return { error: RATE_LIMIT_MESSAGE };
+    return { error: RATE_LIMIT_MESSAGE, values };
   }
 
   let userId: string;
@@ -104,7 +114,7 @@ export async function registerAction(
     });
     userId = created.user.id;
   } catch (error) {
-    return { error: authErrorMessage(error) };
+    return { error: authErrorMessage(error), values };
   }
 
   try {
@@ -137,9 +147,10 @@ export async function loginAction(
     email: text(formData, "email"),
     password: text(formData, "password"),
   });
+  const values = formValues(formData);
 
   if (!parsed.success) {
-    return { fieldErrors: z.flattenError(parsed.error).fieldErrors };
+    return { fieldErrors: z.flattenError(parsed.error).fieldErrors, values };
   }
 
   // Por IP cuenta todo intento; por correo solo los fallos (y se limpian al entrar).
@@ -151,7 +162,7 @@ export async function loginAction(
     isRateLimited(emailIpKey, RATE_LIMITS.loginFailuresPerEmailIp),
     isRateLimited(emailKey, RATE_LIMITS.loginFailuresPerEmail),
   ]);
-  if (!byIp.allowed || emailIpBlocked || emailBlocked) return { error: RATE_LIMIT_MESSAGE };
+  if (!byIp.allowed || emailIpBlocked || emailBlocked) return { error: RATE_LIMIT_MESSAGE, values };
 
   try {
     await auth.api.signInEmail({
@@ -166,7 +177,7 @@ export async function loginAction(
       hitRateLimit(emailIpKey, RATE_LIMITS.loginFailuresPerEmailIp),
       hitRateLimit(emailKey, RATE_LIMITS.loginFailuresPerEmail),
     ]);
-    return { error: authErrorMessage(error) };
+    return { error: authErrorMessage(error), values };
   }
 
   await clearRateLimit(emailIpKey, emailKey);

@@ -5,7 +5,8 @@ import { createEmployeeAction } from "@/actions/team";
 import { SubmitButton } from "@/components/forms/submit-button";
 import { Alert } from "@/components/ui/alert";
 import { Field, inputStyles } from "@/components/ui/field";
-import { firstFieldError, initialActionState } from "@/lib/action-state";
+import { PasswordInput } from "@/components/ui/password-input";
+import { fieldValue, firstFieldError, initialActionState } from "@/lib/action-state";
 
 /** El dueño crea la cuenta de un trabajador con correo y contraseña inicial. */
 export function EmployeeForm() {
@@ -28,6 +29,7 @@ export function EmployeeForm() {
             name="name"
             autoComplete="off"
             placeholder="Nombre del trabajador"
+            defaultValue={fieldValue(state, "name")}
             className={inputStyles}
           />
         </Field>
@@ -38,6 +40,7 @@ export function EmployeeForm() {
             type="email"
             autoComplete="off"
             placeholder="trabajador@correo.com"
+            defaultValue={fieldValue(state, "email")}
             className={inputStyles}
           />
         </Field>
@@ -46,15 +49,15 @@ export function EmployeeForm() {
           htmlFor="employee-password"
           hint="Mínimo 8 caracteres. Luego la puede cambiar en Mi cuenta."
           error={firstFieldError(state, "password")}
-          className="sm:col-span-2"
         >
-          <input
-            id="employee-password"
-            name="password"
-            type="password"
-            autoComplete="new-password"
-            className={inputStyles}
-          />
+          <PasswordInput id="employee-password" name="password" autoComplete="new-password" />
+        </Field>
+        <Field
+          label="Repite la contraseña"
+          htmlFor="employee-confirm-password"
+          error={firstFieldError(state, "confirmPassword")}
+        >
+          <PasswordInput id="employee-confirm-password" name="confirmPassword" autoComplete="new-password" />
         </Field>
       </div>
 

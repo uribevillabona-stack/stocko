@@ -5,7 +5,8 @@ import { acceptInvitationAction } from "@/actions/team";
 import { SubmitButton } from "@/components/forms/submit-button";
 import { Alert } from "@/components/ui/alert";
 import { Field, inputStyles } from "@/components/ui/field";
-import { firstFieldError, initialActionState } from "@/lib/action-state";
+import { PasswordInput } from "@/components/ui/password-input";
+import { fieldValue, firstFieldError, initialActionState } from "@/lib/action-state";
 
 export function InvitationForm({
   token,
@@ -32,6 +33,7 @@ export function InvitationForm({
               autoComplete="name"
               autoFocus
               placeholder="Ana Pérez"
+              defaultValue={fieldValue(state, "name")}
               className={inputStyles}
             />
           </Field>
@@ -42,14 +44,15 @@ export function InvitationForm({
             hint="Mínimo 8 caracteres."
             error={firstFieldError(state, "password")}
           >
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="new-password"
-              placeholder="••••••••"
-              className={inputStyles}
-            />
+            <PasswordInput id="password" name="password" autoComplete="new-password" placeholder="••••••••" />
+          </Field>
+
+          <Field
+            label="Repite la contraseña"
+            htmlFor="confirmPassword"
+            error={firstFieldError(state, "confirmPassword")}
+          >
+            <PasswordInput id="confirmPassword" name="confirmPassword" autoComplete="new-password" placeholder="••••••••" />
           </Field>
         </>
       ) : null}

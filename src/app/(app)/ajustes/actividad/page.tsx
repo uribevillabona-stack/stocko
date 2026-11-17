@@ -30,6 +30,7 @@ function describe(
     case "team.invitation_created":
     case "team.invitation_revoked":
     case "team.employee_created":
+    case "account.password_recovered":
       return String(d.email ?? "");
     case "product.created":
     case "product.updated":

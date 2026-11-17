@@ -16,6 +16,7 @@ const path = require("node:path");
 const pgctl = require("./lib/postgres.cjs");
 const backup = require("./lib/backup.cjs");
 const updates = require("./lib/updates.cjs");
+const recovery = require("./lib/recovery.cjs");
 
 const PREFERRED_APP_PORT = 47821;
 const DB_NAME = "stocko";
@@ -139,6 +140,8 @@ let state = "starting";
 let mainWindow = null;
 let server = null;
 let appUrl = null;
+/** Firma los enlaces de "Olvidé mi contraseña" (lib/recovery.cjs). Nueva en cada arranque. */
+let recoveryKey = null;
 let quitting = false;
 let shutdownDone = false;
 /** Actualizaciones (instalador y portable; en la Store y en desarrollo queda inactivo). */
@@ -353,6 +356,7 @@ async function startServices(status, { fresh = false } = {}) {
   appUrl = `http://127.0.0.1:${appPort}`;
   fs.mkdirSync(paths.uploads, { recursive: true });
   const out = fs.openSync(path.join(paths.logs, "servidor.log"), "a");
+  recoveryKey = recovery.newRecoveryKey();
   const child = spawn(process.execPath, [path.join(serverDir, "stocko-entry.mjs")], {
     cwd: serverDir,
     windowsHide: true,
@@ -372,6 +376,7 @@ async function startServices(status, { fresh = false } = {}) {
       NEXT_PUBLIC_APP_URL: appUrl,
       ENCRYPTION_KEY: config.encryptionKey,
       LOCAL_UPLOADS_DIR: paths.uploads,
+      STOCKO_RECOVERY_KEY: recoveryKey,
     }),
   });
   fs.closeSync(out);
@@ -546,6 +551,35 @@ function setState(next) {
   if (fresh) fresh.enabled = next === "failed" && lastFailure?.code === "MISSING_DB" && !quitting;
   const print = menu.getMenuItemById("print");
   if (print) print.enabled = next === "ready";
+  const recover = menu.getMenuItemById("recover");
+  if (recover) recover.enabled = next === "ready";
+}
+
+/** "Olvidé mi contraseña": abre /recuperar con un enlace firmado de un solo uso (15 min). */
+function openRecovery() {
+  if (state !== "ready" || !appUrl || !recoveryKey || !mainWindow || mainWindow.isDestroyed()) return;
+  const token = recovery.createRecoveryToken(recoveryKey);
+  void mainWindow.loadURL(`${appUrl}/recuperar?token=${encodeURIComponent(token)}`);
+}
+
+/** Desde el menú se puede estar a mitad de una venta: se pregunta antes de salir de la página. */
+async function openRecoveryFromMenu() {
+  if (state !== "ready" || !mainWindow || mainWindow.isDestroyed()) return;
+  const current = mainWindow.webContents.getURL();
+  const onAuthPage = /^\/(login|registro|recuperar)(\/|\?|$)/.test(current.slice((appUrl || "").length));
+  if (!onAuthPage) {
+    const answer = await dialog.showMessageBox(mainWindow, {
+      type: "question",
+      title: "Olvidé mi contraseña",
+      message: "¿Ir a poner una contraseña nueva?",
+      detail: "Se sale de esta página: lo que no hayas guardado se pierde.",
+      buttons: ["Continuar", "Cancelar"],
+      defaultId: 0,
+      cancelId: 1,
+    });
+    if (answer.response !== 0) return;
+  }
+  openRecovery();
 }
 
 function isAppUrl(url) {
@@ -591,6 +625,11 @@ function createWindow() {
 // Enlaces de WhatsApp, catálogo, etc. que salen de Stocko se abren en el navegador.
 app.on("web-contents-created", (_event, contents) => {
   contents.setWindowOpenHandler(({ url }) => {
+    // Ctrl+clic o clic central en "¿Olvidaste tu contraseña?": igual que un clic normal.
+    if (url === recovery.RECOVERY_ACTION_URL) {
+      if (contents === mainWindow?.webContents && isAppUrl(contents.getURL())) openRecovery();
+      return { action: "deny" };
+    }
     if (isAppUrl(url)) {
       return {
         action: "allow",
@@ -604,6 +643,12 @@ app.on("web-contents-created", (_event, contents) => {
     return { action: "deny" };
   });
   contents.on("will-navigate", (event, url) => {
+    // Enlace "¿Olvidaste tu contraseña?" de /login: solo desde la ventana principal de Stocko.
+    if (url === recovery.RECOVERY_ACTION_URL) {
+      event.preventDefault();
+      if (contents === mainWindow?.webContents && isAppUrl(contents.getURL())) openRecovery();
+      return;
+    }
     if (url.startsWith(PAGE_ACTION)) {
       event.preventDefault();
       runPageAction(contents, url);
@@ -978,6 +1023,8 @@ function buildMenu() {
               { type: "separator" },
             ]
           : []),
+        { id: "recover", label: "Olvidé mi contraseña…", enabled: state === "ready", click: () => void openRecoveryFromMenu() },
+        { type: "separator" },
         { label: "Política de privacidad", click: () => openLegal("privacidad") },
         { label: "Términos de uso", click: () => openLegal("terminos") },
         { label: "Licencias", click: () => openLegal("licencias") },
