@@ -38,6 +38,7 @@ const { env } = await import("@/lib/env");
 const { initialActionState } = await import("@/lib/action-state");
 const { RECOVERY_ACTION_URL, verifyRecoveryToken } = await import("@/lib/desktop-recovery");
 const { listRecoverableAccounts } = await import("@/server/services/recovery");
+const { dismissOwnerRecoveryNotice, ownerRecoveryNotice } = await import("@/server/services/recovery-notice");
 // El token lo crea Stocko para Windows: misma implementación que usa el instalador.
 const desktopRecovery = createRequire(import.meta.url)("../desktop/lib/recovery.cjs") as {
   RECOVERY_ACTION_URL: string;
@@ -251,5 +252,65 @@ describe("recuperar la contraseña en Stocko para Windows", () => {
     expect(await recover(desktopRecovery.createRecoveryToken(key), userId)).toMatchObject({
       result: { error: "Esto solo está en Stocko para Windows." },
     });
+  });
+});
+
+describe("aviso al dueño cuando se recupera una contraseña de dueño", () => {
+  async function setup() {
+    env.STOCKO_DESKTOP = "1";
+    env.STOCKO_RECOVERY_KEY = desktopRecovery.newRecoveryKey();
+    await register();
+    const [owner] = await listRecoverableAccounts();
+    if (!owner) throw new Error("falta la cuenta del dueño");
+    const [membership] = await db.select().from(memberships).where(eq(memberships.userId, owner.id));
+    const employeeId = randomUUID();
+    await db.insert(user).values({ id: employeeId, name: "Beto", email: "beto@tienda.com" });
+    await db.insert(account).values({
+      id: randomUUID(),
+      accountId: employeeId,
+      providerId: "credential",
+      userId: employeeId,
+      password: await hashPassword("inicial-123"),
+    });
+    await db.insert(memberships).values({ businessId: membership!.businessId, userId: employeeId, role: "employee" });
+    const recoverAs = (userId: string, password: string) =>
+      run(() =>
+        recoverPasswordAction(
+          initialActionState,
+          form({ token: desktopRecovery.createRecoveryToken(env.STOCKO_RECOVERY_KEY!), userId, password, confirmPassword: password }),
+        ),
+      );
+    return { ownerId: owner.id, employeeId, businessId: membership!.businessId, recoverAs };
+  }
+
+  it("sin recuperaciones no hay aviso, y recuperar la de un trabajador tampoco lo muestra", async () => {
+    const { ownerId, employeeId, businessId, recoverAs } = await setup();
+    expect(await ownerRecoveryNotice(businessId, ownerId)).toEqual([]);
+    await recoverAs(employeeId, "beto-nueva-1");
+    expect(await ownerRecoveryNotice(businessId, ownerId)).toEqual([]);
+  });
+
+  it("si alguien lo cerró, un cambio nuevo vuelve a mostrar también los anteriores", async () => {
+    const { ownerId, businessId, recoverAs } = await setup();
+
+    // Alguien recupera la cuenta del dueño, entra como dueño y cierra el aviso.
+    await recoverAs(ownerId, "intruso-123");
+    const first = await ownerRecoveryNotice(businessId, ownerId);
+    expect(first.map((change) => change.email)).toEqual(["ana@tienda.com"]);
+    await dismissOwnerRecoveryNotice(ownerId, first[0]!.at);
+    expect(await ownerRecoveryNotice(businessId, ownerId)).toEqual([]);
+
+    // El dueño real ya no puede entrar, recupera su contraseña y ve los dos cambios.
+    await recoverAs(ownerId, "dueno-real-123");
+    const both = await ownerRecoveryNotice(businessId, ownerId);
+    expect(both).toHaveLength(2);
+    expect(both[0]!.at.getTime()).toBeGreaterThanOrEqual(both[1]!.at.getTime());
+  });
+
+  it("los cambios de hace más de 30 días ya no salen", async () => {
+    const { ownerId, businessId, recoverAs } = await setup();
+    await recoverAs(ownerId, "dueno-real-123");
+    const in31Days = new Date(Date.now() + 31 * 24 * 60 * 60 * 1000);
+    expect(await ownerRecoveryNotice(businessId, ownerId, in31Days)).toEqual([]);
   });
 });

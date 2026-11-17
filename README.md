@@ -209,7 +209,7 @@ scripts/                    PostgreSQL embebido e íconos
 
 `npm test` usa `DATABASE_URL_TEST`, migra el esquema solo y vacía las tablas antes de cada prueba de integración. **No apuntes esa variable a la base de datos de desarrollo.** Con el PostgreSQL embebido ya existe `stocko_test`.
 
-105 pruebas en 16 archivos. Cubren:
+108 pruebas en 16 archivos. Cubren:
 
 - Dinero, cantidades, teléfonos, cifrado, fechas por zona horaria (incluido el cambio de horario) y validaciones.
 - Inventario: movimientos, sobreventa, salidas simultáneas sin stock negativo, reservas (entregar, liberar, vencer), alertas y aislamiento.
@@ -235,6 +235,7 @@ La primera vez se crea la cuenta en "Crea una". No trae datos demo. Para que un 
 **Olvidé mi contraseña.** En Windows no hay correo para enviar un enlace. En la pantalla de entrar, **¿Olvidaste tu contraseña?** (o Ayuda → **Olvidé mi contraseña…**) abre `/recuperar`: se elige la cuenta de este PC y se pone una contraseña nueva. Se cierran las sesiones abiertas de esa cuenta, se desbloquean los intentos fallidos y queda anotado en Ajustes → Actividad.
 - Stocko abre esa página con un enlace firmado de un solo uso que vence a los 15 minutos (`desktop/lib/recovery.cjs` lo firma, `src/lib/desktop-recovery.ts` lo verifica). La clave (`STOCKO_RECOVERY_KEY`) se crea en cada arranque y solo la conocen Stocko y su servidor: nadie más en la red ni en el PC puede crear un enlace, y en la versión web la página no existe.
 - Quien usa este PC con esta cuenta de Windows ya puede abrir la base de datos, así que esto no abre una puerta nueva. Si los trabajadores usan el mismo PC, conviene darles su propia cuenta de Windows.
+- Si se recupera una cuenta de **dueño**, los dueños ven un aviso con la fecha al entrar. Si alguien lo cierra y después hay otro cambio, el aviso muestra todos los de los últimos 30 días: así el dueño real, que tendrá que recuperar su contraseña porque la suya dejó de servir, ve también el cambio que hizo otra persona (`src/server/services/recovery-notice.ts`).
 
 **Datos y copias de seguridad.**
 - `%LOCALAPPDATA%\Stocko` guarda:
